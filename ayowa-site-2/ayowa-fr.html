@@ -1,0 +1,804 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>[hidden]{display:none!important}</style></head><body>
+<title>AYOWA (FR)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Karla:wght@400;500&display=swap">
+<style>
+/* Layout: dark void, the clay in the centre, title top-left, people top-right, phone pairing bottom-left, tools at the bottom. */
+:root {
+  --void: #0e0d12;
+  --ink: #ece8f2;
+  --muted: #8c8799;
+  --line: #2c2935;
+  --panel: rgba(22, 20, 29, 0.85);
+  --accent: #e6c9a8;
+  --display: "Syncopate", "Helvetica Neue", Arial, sans-serif;
+  --body: "Karla", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; }
+body { background: var(--void); color: var(--ink); font: 15px/1.45 var(--body); overflow: hidden; }
+#stage { position: fixed; inset: 0; touch-action: none; }
+#stage canvas { display: block; }
+.ui { position: fixed; z-index: 2; }
+header.ui {
+  top: calc(18px + env(safe-area-inset-top, 0px)); left: 18px;
+  display: grid; gap: 8px; max-width: min(380px, calc(100% - 36px)); pointer-events: none;
+}
+h1 { margin: 0; font: 700 22px/1 var(--display); letter-spacing: 0.32em; }
+#hint { color: var(--muted); font-size: 14px; text-wrap: balance; }
+#who {
+  top: calc(18px + env(safe-area-inset-top, 0px)); right: 18px;
+  display: grid; justify-items: end; gap: 6px;
+  font-size: 13px; color: var(--muted); pointer-events: none;
+}
+#dots { display: flex; gap: 5px; }
+#dots i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+nav.ui {
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px;
+  width: max-content; max-width: calc(100% - 36px);
+}
+.seg { display: flex; gap: 4px; padding: 3px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; }
+.seg button { border: 1px solid transparent; background: transparent; }
+button {
+  font: 500 14px var(--body); color: var(--ink);
+  background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+  padding: 9px 16px; cursor: pointer;
+}
+button:hover { border-color: var(--muted); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #1c1610; }
+.size {
+  display: flex; align-items: center; gap: 8px; padding: 6px 14px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+  font-size: 13px; color: var(--muted);
+}
+.size input { width: 110px; accent-color: var(--accent); }
+#pair {
+  left: 18px; bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  display: grid; gap: 8px; justify-items: start;
+  padding: 12px; width: 180px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  font-size: 13px; color: var(--muted);
+}
+#qr { background: #fff; padding: 8px; border-radius: 8px; line-height: 0; }
+#qr img, #qr canvas { width: 140px !important; height: 140px !important; display: block; }
+#code { font: 700 18px/1 var(--display); letter-spacing: 0.2em; color: var(--ink); }
+#pairNote { max-width: 100%; }
+/* phone mode: the same page opened on a phone with #phone */
+#phoneUI {
+  position: fixed; inset: 0; z-index: 5; background: var(--void);
+  display: grid; grid-template-rows: auto auto 1fr auto; gap: 14px;
+  padding-inline: 16px;
+  padding-block: calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-bottom, 0px));
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+#phoneUI header { display: flex; align-items: center; justify-content: space-between; padding-inline-end: 6px; }
+#meDot { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 16px currentColor; }
+#phoneStatus { color: var(--muted); font-size: 14px; }
+#phonePad {
+  border: 1px dashed var(--line); border-radius: 18px; touch-action: none;
+  display: grid; place-items: center; text-align: center; color: var(--muted); font-size: 14px; padding: 12px;
+}
+.holds { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.holds button {
+  height: 110px; border-radius: 22px; border-width: 2px; touch-action: none;
+  font: 700 15px/1 var(--display); letter-spacing: 0.15em;
+}
+.holds button.on { background: var(--me, var(--accent)); color: #1c1610; border-color: var(--me, var(--accent)); }
+#phonePull { border-style: dashed; }
+@media (max-width: 560px) {
+  h1 { font-size: 17px; }
+  button { padding: 8px 12px; font-size: 13px; }
+  .size input { width: 80px; }
+  }
+</style>
+
+<div id="stage"></div>
+<div id="phoneUI" hidden>
+  <header><h1>AYOWA</h1><div id="meDot" aria-hidden="true"></div></header>
+  <div id="phoneStatus" role="status"></div>
+  <div id="phonePad"></div>
+  <div class="holds">
+    <button id="phonePush" type="button"></button>
+    <button id="phonePull" type="button"></button>
+  </div>
+</div>
+<header class="ui">
+  <h1>AYOWA</h1>
+  <div id="hint"></div>
+</header>
+<div id="who" class="ui" aria-live="polite"><div id="dots"></div><div id="whoText"></div></div>
+<div id="pair" class="ui">
+  <span id="pairTitle"></span>
+  <div id="qr"></div>
+  <span id="code"></span>
+  <span id="pairNote"></span>
+</div>
+<nav class="ui">
+  <label class="size"><span id="sizeLabel"></span><input id="size" type="range" min="0.06" max="0.4" step="0.01" value="0.16"></label>
+  <button id="pairBtn" type="button"></button>
+  <button id="resetBtn" type="button"></button>
+</nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+'use strict';
+/*
+  AYOWA: a living 2D clay ball shaped by cursors.
+
+  The cursors are phones used as air pointers: you point the phone at the screen,
+  hold PUSH or PULL on the phone to shape the clay. Each phone has its own color.
+  The screen only shows the clay: the mouse does not shape it, only the phone cursors do.
+
+  How the clay works (simple soft body):
+  - The ball is a ring of points connected by springs.
+  - Pressure keeps the inside area constant: push one side in, another side comes out.
+  - PUSH: a cursor is a small solid circle, points inside it are pushed to its edge.
+  - PULL: a cursor grabs the clay near it and drags it to stretch it.
+  - The springs quickly accept their new length, so the clay keeps precise shapes.
+  - Touched places slowly take the color of the cursor that touches them.
+  - The outline breathes and moves a little when drawn: the matter is alive.
+
+  Everyone together:
+  - Everyone who opens the same address shares the same clay (room "AYOWA", or the code after #).
+  - The first screen to arrive is the HOST: it runs the clay and sends its shape to the other
+    screens about 15 times a second. The other screens send their cursor to the host.
+    If the host leaves, another screen takes over.
+
+  How phones connect:
+  - This page opens a "room" with a short code and shows a QR code.
+  - The phone page (ayowa-phone.html) joins the room through PeerJS (no server to install).
+  - The phone sends its position (0 to 1 on both axes) and its mode (0 hover, 1 push, 2 pull).
+  - Any other pointer system can drive the clay too: call
+      AYOWA.cursor(id, x, y, mode)   x, y from 0 to 1, mode 0 / 1 / 2
+      AYOWA.leave(id)
+*/
+
+const LANG = 'fr';
+const TEXT = {
+  en: {
+    hint: 'Scan the code with your phone, point it at the screen and hold Push or Pull to shape the clay.',
+    push: 'Push', pull: 'Pull', size: 'Size', reset: 'Start over',
+    pairTitle: 'Scan to join with your phone', pairShow: 'Join with a phone', pairHide: 'Hide code',
+    pairNote: 'Or open ayowa-phone.html and type the code.',
+    previewNote: 'Scan with a phone signed in to your Claude account.',
+    phoneWait: 'Looking for the AYOWA screen… Keep the page open on the computer.',
+    phoneOk: 'Connected. You are this color on the screen.',
+    phonePad: 'Slide your finger here to move your cursor',
+    phoneOff: 'Your phone cannot connect here. Open this link while signed in to Claude.',
+    alone: 'No phone connected yet. Scan the code to join.',
+    people: n => `${n} phone${n > 1 ? 's' : ''} shaping together`
+  },
+  fr: {
+    hint: 'Scanne le code avec ton téléphone, vise l’écran et maintiens Pousser ou Tirer pour modeler.',
+    push: 'Pousser', pull: 'Tirer', size: 'Taille', reset: 'Recommencer',
+    pairTitle: 'Scanne pour rejoindre avec ton téléphone', pairShow: 'Rejoindre avec un téléphone', pairHide: 'Cacher le code',
+    pairNote: 'Ou ouvre ayowa-phone.html et tape le code.',
+    previewNote: 'Scanne avec un téléphone connecté à ton compte Claude.',
+    phoneWait: 'Recherche de l’écran AYOWA… Garde la page ouverte sur l’ordinateur.',
+    phoneOk: 'Connecté·e. Tu as cette couleur sur l’écran.',
+    phonePad: 'Glisse ton doigt ici pour déplacer ton curseur',
+    phoneOff: 'Ton téléphone ne peut pas se connecter ici. Ouvre ce lien en étant connecté·e à Claude.',
+    alone: 'Aucun téléphone connecté. Scanne le code pour rejoindre.',
+    people: n => `${n} téléphone${n > 1 ? 's' : ''} modèle${n > 1 ? 'nt' : ''} ensemble`
+  }
+}[LANG];
+
+/* ---------- Settings ---------- */
+const N = 260;            // number of points on the edge (more = more precise)
+const STIFF = 0.6;        // how strongly springs keep their length
+const PRESSURE = 0.1;     // how strongly the ball keeps its area
+const PLASTIC = 4;        // how fast it accepts its new shape (higher = more malleable)
+const SMOOTH = 0.012;     // edge softening (lower = sharper details)
+const DAMP = 0.86;        // 1 = very bouncy, lower = calmer
+const LIFE = 0.012;       // how much the outline moves on its own
+const COLOR_SPEED = 0.08; // how fast a touched place takes the color of the cursor
+const CURSOR_TIMEOUT = 3000; // a phone silent for this long disappears (ms)
+const PALETTE = ['#ff7eb6', '#5ee3e0', '#ffd166', '#9b8cff', '#7ee081', '#ff9f5a', '#f5f5f5', '#ff5d5d'];
+
+/* ---------- State ---------- */
+let R = 200, cx = 0, cy = 0;
+let pts = [];             // {x, y, px, py, c:[r,g,b,amount]} in ball units, centred on 0
+let rest = [];            // rest length of each spring
+let area0 = 0;
+let tool = 'push';        // mouse tool
+let brush = 0.16;         // cursor size, in ball radii
+const grabs = new Map();  // active pulls: key -> {sel, x, y, rgb}
+const cursors = new Map();// every cursor: id -> {x, y (0..1), mode, rgb, last, mouse}
+
+const hexRgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const COLORS = PALETTE.map(hexRgb);
+const clampNum = (v, a, b) => Math.max(a, Math.min(b, v));
+
+// give each new cursor the first free color
+function freeColor() {
+  const used = new Set([...cursors.values()].map(c => c.colorIndex));
+  for (let i = 0; i < COLORS.length; i++) if (!used.has(i)) return i;
+  return cursors.size % COLORS.length;
+}
+
+/* ---------- The clay ---------- */
+function resetBall() {
+  pts = [];
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    pts.push({ x: Math.cos(a), y: Math.sin(a), px: Math.cos(a), py: Math.sin(a), c: [0, 0, 0, 0] });
+  }
+  rest = new Array(N).fill(2 * Math.sin(Math.PI / N));
+  area0 = shapeArea();
+  grabs.clear();
+}
+
+function shapeArea() {
+  let s = 0;
+  for (let i = 0; i < N; i++) { const a = pts[i], b = pts[(i + 1) % N]; s += a.x * b.y - b.x * a.y; }
+  return s / 2;
+}
+
+// a touched place slowly takes the color of the cursor that touches it
+function paint(p, rgb, amount) {
+  const c = p.c, k = Math.min(1, amount);
+  if (c[3] === 0) { c[0] = rgb[0]; c[1] = rgb[1]; c[2] = rgb[2]; }
+  c[0] += (rgb[0] - c[0]) * k; c[1] += (rgb[1] - c[1]) * k; c[2] += (rgb[2] - c[2]) * k;
+  c[3] = Math.min(1, c[3] + k);
+}
+
+function startGrab(key, x, y, r, rgb) {
+  const gr = Math.max(r * 1.6, 0.12), sel = [];
+  pts.forEach((p, i) => {
+    const d = Math.hypot(p.x - x, p.y - y);
+    if (d < gr) sel.push({ i, w: (1 - d / gr) ** 2, ox: p.x - x, oy: p.y - y });
+  });
+  if (sel.length) grabs.set(key, { sel, x, y, rgb });
+}
+
+function moveGrab(key, x, y) {
+  const g = grabs.get(key);
+  if (g) { g.x = x; g.y = y; }
+}
+
+// grabbed clay follows the cursor: each point is drawn towards where the cursor holds it
+function holdGrabs(strength) {
+  for (const g of grabs.values()) {
+    for (const s of g.sel) {
+      const p = pts[s.i], k = s.w * strength;
+      p.x += (g.x + s.ox - p.x) * k;
+      p.y += (g.y + s.oy - p.y) * k;
+      paint(p, g.rgb, s.w * COLOR_SPEED);
+    }
+  }
+}
+
+function step(pushers, dt) {
+  // 1. move (keeps a little speed, so it wobbles)
+  for (const p of pts) {
+    const vx = (p.x - p.px) * DAMP, vy = (p.y - p.py) * DAMP;
+    p.px = p.x; p.py = p.y;
+    p.x += vx; p.y += vy;
+  }
+  for (let it = 0; it < 6; it++) {
+    // 2. springs between neighbours
+    for (let i = 0; i < N; i++) {
+      const a = pts[i], b = pts[(i + 1) % N];
+      const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1e-6;
+      const c = ((L - rest[i]) / L) * 0.5 * STIFF;
+      a.x += dx * c; a.y += dy * c; b.x -= dx * c; b.y -= dy * c;
+    }
+    // 3. pressure: push along the outward normal to keep the area
+    const diff = (area0 - shapeArea()) / area0;
+    for (let i = 0; i < N; i++) {
+      const prev = pts[(i + N - 1) % N], next = pts[(i + 1) % N], p = pts[i];
+      p.x += (next.y - prev.y) * diff * PRESSURE * 4;
+      p.y -= (next.x - prev.x) * diff * PRESSURE * 4;
+    }
+    // 4. light smoothing, so the edge stays soft (no sharp spikes, no writing)
+    for (let i = 0; i < N; i++) {
+      const prev = pts[(i + N - 1) % N], next = pts[(i + 1) % N], p = pts[i];
+      p.x += ((prev.x + next.x) / 2 - p.x) * SMOOTH;
+      p.y += ((prev.y + next.y) / 2 - p.y) * SMOOTH;
+    }
+    // 5. pulling cursors hold the clay they grabbed
+    holdGrabs(0.7);
+    // 6. pushing cursors are solid: points inside a cursor circle go to its edge
+    for (const c of pushers) {
+      for (const p of pts) {
+        const dx = p.x - c.x, dy = p.y - c.y, d = Math.hypot(dx, dy);
+        if (d < c.r && d > 1e-6) { p.x = c.x + (dx / d) * c.r; p.y = c.y + (dy / d) * c.r; paint(p, c.rgb, COLOR_SPEED); }
+      }
+    }
+  }
+  // 7. plasticity: springs accept their current length
+  const k = Math.min(1, PLASTIC * dt);
+  for (let i = 0; i < N; i++) {
+    const a = pts[i], b = pts[(i + 1) % N];
+    rest[i] += (Math.hypot(b.x - a.x, b.y - a.y) - rest[i]) * k;
+  }
+  // 8. keep points evenly spaced along the edge (only when nobody is pulling)
+  if (!grabs.size) resampleIfStretched();
+}
+
+function resampleIfStretched() {
+  let total = 0, maxL = 0;
+  const L = pts.map((a, i) => { const b = pts[(i + 1) % N]; const l = Math.hypot(b.x - a.x, b.y - a.y); total += l; if (l > maxL) maxL = l; return l; });
+  const avg = total / N;
+  if (maxL < avg * 1.8) return;
+  const out = [];
+  let seg = 0, acc = 0;
+  for (let k = 0; k < N; k++) {
+    const target = k * avg;
+    while (acc + L[seg] < target && seg < N - 1) { acc += L[seg]; seg++; }
+    const t = L[seg] > 0 ? (target - acc) / L[seg] : 0;
+    const a = pts[seg], b = pts[(seg + 1) % N];
+    const x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t;
+    const c = a.c.map((v, j) => v + (b.c[j] - v) * t);   // colors follow the clay
+    out.push({ x, y, px: x, py: y, c });
+  }
+  pts = out;
+  rest = new Array(N).fill(avg);
+}
+
+/* ---------- Cursors ----------
+   Every cursor (a phone or the mouse) goes through the same function.
+   x and y go from 0 (left / top) to 1 (right / bottom). mode: 0 hover, 1 push, 2 pull. */
+function setCursor(id, x, y, mode, mouse) {
+  if (![x, y].every(Number.isFinite)) return;
+  id = String(id).slice(0, 40);
+  let c = cursors.get(id);
+  if (!c) {
+    const colorIndex = mouse ? myColorIndex : freeColor();
+    c = { id, colorIndex, rgb: COLORS[colorIndex], x: 0.5, y: 0.5, mode: 0, mouse: !!mouse };
+    cursors.set(id, c);
+    tellColor(id, c);
+  }
+  c.x = clampNum(x, -0.1, 1.1); c.y = clampNum(y, -0.1, 1.1);
+  c.mode = mode === 1 || mode === 2 ? mode : 0;
+  c.last = performance.now();
+  c.hidden = false;
+  return c;
+}
+function leaveCursor(id) { cursors.delete(String(id)); grabs.delete('c' + id); }
+// a cursor that is still here but outside the window: kept (with its color), not drawn, not shaping
+function hideCursor(id) { const c = cursors.get(String(id)); if (c) { c.hidden = true; c.mode = 0; } }
+
+// other pointer systems (for example a WebSocket server) can drive the clay with these
+window.AYOWA = { cursor: (id, x, y, mode) => setCursor(id, x, y, mode, false), leave: leaveCursor };
+
+// screen position of a cursor
+const toScreen = c => ({ x: c.x * width, y: c.y * height });
+const toBall = (x, y) => ({ x: (x - cx) / R, y: (y - cy) / R });
+
+// turn every cursor into pushers, grabs and drawings, once per frame
+function applyCursors() {
+  const now = performance.now(), pushers = [], live = new Set();
+  for (const c of [...cursors.values()]) {
+    if (!c.mouse && !c.keep && now - c.last > CURSOR_TIMEOUT) { leaveCursor(c.id); continue; }
+    if (c.hidden) continue;
+    const s = toScreen(c), b = toBall(s.x, s.y), key = 'c' + c.id, r = c.size || brush;
+    if (c.mode === 1) pushers.push({ x: b.x, y: b.y, r, rgb: c.rgb });
+    if (c.mode === 2) {
+      live.add(key);
+      if (!grabs.has(key)) startGrab(key, b.x, b.y, r, c.rgb); else moveGrab(key, b.x, b.y);
+    }
+  }
+  for (const k of [...grabs.keys()]) if (!live.has(k)) grabs.delete(k);
+  return pushers;
+}
+
+/* ---------- Phones: PeerJS room ---------- */
+const inPreview = !!(window.claude && typeof window.claude.use === 'function');
+// opened with #phone: this page becomes the phone controller
+// (also when the page is opened on a phone: small touch screen, in case the #phone part of the link got lost)
+const PHONE_MODE = (location.hash || '').slice(1).toLowerCase() === 'phone' ||
+  (window.matchMedia && matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600);
+// the address of this page on Claude, used for the QR code inside the Claude preview
+const ARTIFACT_URL = { fr: 'https://claude.ai/artifact/3VTqcoMcU7nWg489X3GsaR', en: 'https://claude.ai/artifact/DEQG1tVnJADJgEoa1FTean' }[LANG];
+// everyone who opens the same address joins the same room: "AYOWA", or the code written after #
+const ROOM = (location.hash || '').slice(1).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12) || 'AYOWA';
+const PEER_PREFIX = 'ayowa-clay-screen-';
+const conns = new Map();    // host: peer id -> connection (phones and other screens)
+let NET = 'solo';           // 'solo', 'host' or 'guest'
+let myColorIndex = 0;       // the color of this screen's own mouse
+let peer = null, hostConn = null, retryTimer = null;
+
+function tellColor(id, c) {
+  const conn = conns.get(id);
+  if (conn && conn.open) conn.send({ t: 'color', color: PALETTE[c.colorIndex], i: c.colorIndex });
+}
+
+function startPhones() {
+  if (typeof Peer === 'undefined') return;
+  tryHost();
+}
+function closePeer() {
+  conns.clear(); hostConn = null;
+  if (peer && !peer.destroyed) { try { peer.destroy(); } catch (e) { /* ignore */ } }
+  peer = null;
+}
+function retryLater(ms) { clearTimeout(retryTimer); retryTimer = setTimeout(tryHost, ms || 800 + Math.random() * 2000); }
+
+// 1. try to become the host of the room
+function tryHost() {
+  closePeer();
+  const me = new Peer(PEER_PREFIX + ROOM, { debug: 0 });
+  peer = me;
+  me.on('open', () => {
+    if (peer !== me) return;
+    if (NET === 'guest') {
+      // I take over: the clay I was showing becomes the real one
+      for (let i = 0; i < N; i++) { const u = pts[i], v = pts[(i + 1) % N]; rest[i] = Math.hypot(v.x - u.x, v.y - u.y); }
+      for (const id of [...cursors.keys()]) if (id !== 'mouse') cursors.delete(id);
+    }
+    NET = 'host';
+  });
+  me.on('connection', conn => {
+    conn.on('open', () => {
+      conns.set(conn.peer, conn);
+      if (!(conn.metadata && conn.metadata.kind === 'screen')) setCursor(conn.peer, 0.5, 0.5, 0, false);
+    });
+    conn.on('data', msg => {
+      // untrusted input from a phone or a screen: only numbers are used
+      if (!msg || typeof msg !== 'object') return;
+      if (msg.t === 'm' && !(conn.metadata && conn.metadata.kind === 'screen')) {
+        const c = setCursor(conn.peer, +msg.x, +msg.y, msg.p | 0, false);
+        if (c && Number.isFinite(+msg.s)) c.size = clampNum(+msg.s, 0.04, 0.45);
+        if (c && msg.h) hideCursor(conn.peer);
+      } else if (msg.t === 'reset') resetBall();
+    });
+    const gone = () => { conns.delete(conn.peer); leaveCursor(conn.peer); };
+    conn.on('close', gone); conn.on('error', gone);
+  });
+  me.on('error', err => {
+    if (peer !== me) return;
+    if (err && err.type === 'unavailable-id') joinAsGuest();   // someone already hosts this room
+    else retryLater();
+  });
+  me.on('disconnected', () => { if (peer === me && NET === 'host') { try { me.reconnect(); } catch (e) { retryLater(); } } });
+}
+
+// 2. otherwise join the host as a screen
+function joinAsGuest() {
+  closePeer();
+  const me = new Peer({ debug: 0 });
+  peer = me;
+  me.on('open', id => {
+    if (peer !== me) return;
+    const conn = me.connect(PEER_PREFIX + ROOM, { metadata: { kind: 'screen' } });
+    hostConn = conn;
+    conn.on('open', () => { NET = 'guest'; myPeerId = id; });
+    conn.on('data', msg => {
+      if (!msg || typeof msg !== 'object') return;
+      if (msg.t === 'color' && Number.isFinite(+msg.i)) {
+        myColorIndex = Math.abs(+msg.i | 0) % COLORS.length;
+        const m = cursors.get('mouse');
+        if (m) { m.colorIndex = myColorIndex; m.rgb = COLORS[myColorIndex]; }
+      }
+      if (msg.t === 's') applyHostState(msg);
+    });
+    conn.on('close', () => { if (peer === me) retryLater(); });   // the host left: someone takes over
+    conn.on('error', () => { if (peer === me) retryLater(); });
+  });
+  me.on('error', () => { if (peer === me) retryLater(); });
+}
+let myPeerId = null;
+
+// --- the shape as short text: positions as 16-bit numbers, colors as bytes
+function toB64(buf) { let t = ''; const b = new Uint8Array(buf); for (let i = 0; i < b.length; i++) t += String.fromCharCode(b[i]); return btoa(t); }
+function fromB64(str) { const t = atob(str), b = new Uint8Array(t.length); for (let i = 0; i < t.length; i++) b[i] = t.charCodeAt(i); return b.buffer; }
+function encodeShape() {
+  const p = new Int16Array(N * 2), c = new Uint8Array(N * 4);
+  pts.forEach((q, i) => {
+    p[2 * i] = clampNum(Math.round(q.x * 6000), -32000, 32000);
+    p[2 * i + 1] = clampNum(Math.round(q.y * 6000), -32000, 32000);
+    c[4 * i] = q.c[0]; c[4 * i + 1] = q.c[1]; c[4 * i + 2] = q.c[2]; c[4 * i + 3] = Math.round(q.c[3] * 255);
+  });
+  return toB64(p.buffer) + '|' + toB64(c.buffer) + '|' + area0.toFixed(4);
+}
+
+// host: send the clay and every cursor to the other screens, about 15 times a second
+let lastBroadcast = 0;
+function broadcast() {
+  if (NET !== 'host') return;
+  const now = performance.now();
+  if (now - lastBroadcast < 66) return;
+  lastBroadcast = now;
+  const screens = [...conns.values()].filter(c => c.open && c.metadata && c.metadata.kind === 'screen');
+  if (!screens.length) return;
+  const cur = [...cursors.values()].map(c => [c.id, Math.round(c.x * 1e4) / 1e4, Math.round(c.y * 1e4) / 1e4, c.mode, c.colorIndex, c.hidden ? 1 : 0, c.size || 0]);
+  const msg = { t: 's', shape: encodeShape(), cur };
+  screens.forEach(c => c.send(msg));
+}
+
+// guest: receive the clay and the cursors from the host
+let target = null;
+function applyHostState(msg) {
+  try {
+    const [a, b, ar] = String(msg.shape).split('|');
+    const p = new Int16Array(fromB64(a)), c = new Uint8Array(fromB64(b));
+    if (p.length !== N * 2 || c.length !== N * 4) return;
+    target = { p, c };
+    const A = parseFloat(ar); if (Number.isFinite(A) && A > 0.5 && A < 20) area0 = A;
+  } catch (e) { return; }
+  if (!Array.isArray(msg.cur)) return;
+  const seen = new Set(['mouse']);
+  for (const e of msg.cur.slice(0, 40)) {
+    if (!Array.isArray(e)) continue;
+    const id = 'h:' + String(e[0]).slice(0, 40);
+    if (String(e[0]) === myPeerId) continue;            // my own cursor is drawn locally
+    const ci = Math.abs(e[4] | 0) % COLORS.length;
+    let cur = cursors.get(id);
+    if (!cur) { cur = { id, x: 0.5, y: 0.5, mode: 0 }; cursors.set(id, cur); }
+    cur.x = clampNum(+e[1] || 0, -0.1, 1.1); cur.y = clampNum(+e[2] || 0, -0.1, 1.1);
+    cur.mode = e[3] === 1 || e[3] === 2 ? e[3] : 0;
+    cur.colorIndex = ci; cur.rgb = COLORS[ci]; cur.hidden = !!e[5]; cur.keep = true;
+    cur.size = +e[6] || 0;
+    seen.add(id);
+  }
+  for (const id of [...cursors.keys()]) if (!seen.has(id)) cursors.delete(id);
+}
+// guest: glide the clay towards the host's shape between messages
+function followHost() {
+  if (!target) return;
+  const { p, c } = target;
+  for (let i = 0; i < N; i++) {
+    const q = pts[i];
+    q.x += (p[2 * i] / 6000 - q.x) * 0.35; q.y += (p[2 * i + 1] / 6000 - q.y) * 0.35;
+    q.c = [c[4 * i], c[4 * i + 1], c[4 * i + 2], c[4 * i + 3] / 255];
+  }
+}
+window.addEventListener('beforeunload', () => { if (peer) peer.destroy(); });
+
+/* ---------- Phones inside the Claude preview: the page's shared room ----------
+   Everyone who has this page open is in the same room. A phone (opened with #phone)
+   shares {role:'phone', x, y, p}; the screen turns each phone into a cursor and shares
+   which color each phone got. */
+let room = null;
+const roomPhones = new Set();
+
+async function startRoomScreen() {
+  room = await window.claude.use('room');
+  if (!room) return;
+  room.presence({ role: 'screen', col: [] }).catch(() => {});
+  room.onPeers(change => {
+    const now = new Set();
+    for (const p of change.peers) {
+      const pr = p.presence || {};
+      if (p.sameTab || pr.role !== 'phone') continue;
+      now.add(p.peer);
+      setCursor(p.peer, +pr.x, +pr.y, pr.p | 0, false);
+      const c = cursors.get(p.peer);
+      if (c) c.keep = true;          // a room cursor stays until the phone leaves
+    }
+    for (const id of roomPhones) if (!now.has(id)) leaveCursor(id);
+    roomPhones.clear(); now.forEach(id => roomPhones.add(id));
+    shareColors();
+  });
+}
+function shareColors() {
+  if (!room) return;
+  const col = [...roomPhones].map(id => [id, cursors.get(id) ? cursors.get(id).colorIndex : 0]);
+  const sig = JSON.stringify(col);
+  if (sig === shareColors.sig) return;
+  shareColors.sig = sig;
+  room.presence({ role: 'screen', col }).catch(() => {});
+}
+
+// the phone side, inside the Claude preview
+async function startRoomPhone() {
+  const ui = document.getElementById('phoneUI');
+  ui.hidden = false;
+  document.getElementById('stage').hidden = true;
+  document.querySelectorAll('.ui').forEach(el => { el.hidden = true; });
+  const status = document.getElementById('phoneStatus');
+  const say = t => { status.textContent = t; };
+  document.getElementById('phonePad').textContent = TEXT.phonePad;
+  document.getElementById('phonePush').textContent = TEXT.push.toUpperCase();
+  document.getElementById('phonePull').textContent = TEXT.pull.toUpperCase();
+  say(TEXT.phoneWait);
+
+  let x = 0.5, y = 0.5, p = 0, myPeer = null;
+  const send = () => { if (room) room.presence({ role: 'phone', x: Math.round(x * 1e4) / 1e4, y: Math.round(y * 1e4) / 1e4, p }).catch(() => {}); };
+
+  // touchpad: slide to move the cursor
+  const pad = document.getElementById('phonePad');
+  let last = null;
+  pad.addEventListener('pointerdown', e => { pad.setPointerCapture(e.pointerId); last = [e.clientX, e.clientY]; });
+  pad.addEventListener('pointermove', e => {
+    if (!last) return;
+    x = clampNum(x + (e.clientX - last[0]) * 0.003, 0, 1);
+    y = clampNum(y + (e.clientY - last[1]) * 0.003, 0, 1);
+    last = [e.clientX, e.clientY];
+    send();
+  });
+  const end = () => { last = null; };
+  pad.addEventListener('pointerup', end); pad.addEventListener('pointercancel', end);
+
+  // hold PUSH or PULL
+  const hold = (btn, value) => {
+    btn.addEventListener('pointerdown', e => { e.preventDefault(); btn.setPointerCapture(e.pointerId); p = value; btn.classList.add('on'); if (navigator.vibrate) navigator.vibrate(12); send(); });
+    const off = () => { if (p === value) p = 0; btn.classList.remove('on'); send(); };
+    btn.addEventListener('pointerup', off); btn.addEventListener('pointercancel', off);
+    btn.addEventListener('contextmenu', e => e.preventDefault());
+  };
+  hold(document.getElementById('phonePush'), 1);
+  hold(document.getElementById('phonePull'), 2);
+
+  room = await window.claude.use('room');
+  if (!room) { say(TEXT.phoneOff); return; }
+  send();
+  room.onPeers(change => {
+    let screen = null;
+    for (const peerInfo of change.peers) {
+      if (peerInfo.sameTab) myPeer = peerInfo.peer;
+      else if ((peerInfo.presence || {}).role === 'screen') screen = peerInfo.presence;
+    }
+    if (!screen) { say(TEXT.phoneWait); return; }
+    say(TEXT.phoneOk);
+    const mine = Array.isArray(screen.col) ? screen.col.find(e => Array.isArray(e) && e[0] === myPeer) : null;
+    if (mine) {
+      const hex = PALETTE[Math.abs(mine[1] | 0) % PALETTE.length];
+      document.documentElement.style.setProperty('--me', hex);
+      document.getElementById('meDot').style.background = hex;
+      document.getElementById('meDot').style.color = hex;
+    }
+  }, () => say(TEXT.phoneOff));
+}
+
+function showPairing() {
+  document.getElementById('pairTitle').textContent = TEXT.pairTitle;
+  document.getElementById('code').textContent = ROOM;
+  if (inPreview) {
+    // inside Claude: the phone opens this same page with #phone
+    document.getElementById('code').hidden = true;
+    document.getElementById('pairNote').textContent = TEXT.previewNote;
+    if (typeof QRCode !== 'undefined') {
+      new QRCode(document.getElementById('qr'), { text: ARTIFACT_URL + '#phone', width: 280, height: 280, correctLevel: QRCode.CorrectLevel.M });
+    }
+    return;
+  }
+  document.getElementById('pairNote').textContent = TEXT.pairNote;
+  const phoneUrl = new URL('ayowa-phone.html', location.href);
+  phoneUrl.search = '?lang=' + LANG;
+  phoneUrl.hash = ROOM;
+  if (typeof QRCode !== 'undefined') {
+    new QRCode(document.getElementById('qr'), { text: phoneUrl.href, width: 280, height: 280, correctLevel: QRCode.CorrectLevel.M });
+  }
+}
+
+/* ---------- Drawing ---------- */
+function drawBall() {
+  const ctx = drawingContext, t = millis() / 1000;
+  let mx = 0, my = 0;
+  for (const p of pts) { mx += p.x; my += p.y; }
+  mx /= N; my /= N;
+  // the matter is alive: a slow breath and a soft ripple along the edge (drawing only)
+  const breath = 1 + 0.008 * Math.sin(t * 1.3);
+  const s = pts.map((p, i) => {
+    const n = (noise(i * 0.04, t * 0.35) - 0.5) * LIFE * 2;
+    const dx = p.x - mx, dy = p.y - my, d = Math.hypot(dx, dy) || 1;
+    const k = breath + n / d;
+    return [cx + (mx + dx * k) * R, cy + (my + dy * k) * R];
+  });
+  const path = new Path2D();
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const m = mid(s[N - 1], s[0]);
+  path.moveTo(m[0], m[1]);
+  for (let i = 0; i < N; i++) { const mm = mid(s[i], s[(i + 1) % N]); path.quadraticCurveTo(s[i][0], s[i][1], mm[0], mm[1]); }
+  path.closePath();
+
+  const gx = cx + mx * R, gy = cy + my * R;
+  ctx.save();
+  ctx.fillStyle = '#c9b29a';
+  ctx.fill(path);
+  ctx.clip(path);
+  // colors left by the cursors, painted from the edge into the clay
+  for (let i = 0; i < N; i += 2) {
+    const c = pts[i].c;
+    if (c[3] < 0.02) continue;
+    const x = s[i][0] + (gx - s[i][0]) * 0.12, y = s[i][1] + (gy - s[i][1]) * 0.12;
+    const r = R * 0.32;
+    const cg = ctx.createRadialGradient(x, y, 0, x, y, r);
+    cg.addColorStop(0, `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${0.75 * c[3]})`);
+    cg.addColorStop(1, `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},0)`);
+    ctx.fillStyle = cg;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  // soft volume: light top-left, shade bottom-right
+  const g = ctx.createRadialGradient(gx - R * 0.4, gy - R * 0.5, R * 0.05, gx, gy, R * 1.9);
+  g.addColorStop(0, 'rgba(255,255,255,0.35)');
+  g.addColorStop(0.5, 'rgba(255,255,255,0)');
+  g.addColorStop(1, 'rgba(40,25,15,0.55)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+}
+
+function drawCursors() {
+  const ctx = drawingContext;
+  ctx.save();
+  for (const c of cursors.values()) {
+    if (c.hidden) continue;
+    const s = toScreen(c), col = c.rgb.join(',');
+    if (c.mode === 0) {
+      // hovering: a small glowing dot, like a laser
+      const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, 18);
+      g.addColorStop(0, `rgba(${col},0.9)`);
+      g.addColorStop(1, `rgba(${col},0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(s.x, s.y, 18, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = `rgb(${col})`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, Math.PI * 2); ctx.fill();
+    } else {
+      // pressing: the circle that touches the clay (dashed when pulling)
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash(c.mode === 2 ? [4, 4] : []);
+      ctx.strokeStyle = `rgba(${col},0.95)`;
+      ctx.fillStyle = `rgba(${col},0.15)`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, (c.size || brush) * R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = `rgb(${col})`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function updateWho() {
+  const list = [...cursors.values()].filter(c => !c.mouse).map(c => c.colorIndex);
+  const sig = list.join();
+  if (sig === updateWho.sig) return;
+  updateWho.sig = sig;
+  document.getElementById('dots').innerHTML = list.map(i => `<i style="background:${PALETTE[i]}"></i>`).join('');
+  document.getElementById('whoText').textContent = list.length ? TEXT.people(list.length) : TEXT.alone;
+}
+
+/* ---------- Interface ---------- */
+const sizeIn = document.getElementById('size');
+sizeIn.addEventListener('input', () => { brush = +sizeIn.value; });
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (NET === 'guest' && hostConn && hostConn.open) hostConn.send({ t: 'reset' }); else resetBall();
+});
+const pairBtn = document.getElementById('pairBtn'), pairBox = document.getElementById('pair');
+function labelPair() { pairBtn.textContent = pairBox.hidden ? TEXT.pairShow : TEXT.pairHide; }
+pairBtn.addEventListener('click', () => { pairBox.hidden = !pairBox.hidden; labelPair(); });
+
+/* ---------- p5 ---------- */
+function layout() { cx = width / 2; cy = height / 2; R = Math.min(width, height) * 0.2; }
+
+function setup() {
+  if (PHONE_MODE && inPreview) { noLoop(); startRoomPhone(); return; }
+  const c = createCanvas(window.innerWidth, window.innerHeight);
+  c.parent('stage');
+  pixelDensity(Math.min(2, displayDensity()));
+  layout();
+  resetBall();
+  document.documentElement.lang = LANG;
+  document.getElementById('hint').textContent = TEXT.hint;
+  document.getElementById('sizeLabel').textContent = TEXT.size;
+  document.getElementById('resetBtn').textContent = TEXT.reset;
+  brush = +sizeIn.value;
+  labelPair();
+  showPairing();
+  updateWho();
+  if (inPreview) startRoomScreen(); else startPhones();
+}
+
+function windowResized() {
+  if (PHONE_MODE && inPreview) return; resizeCanvas(window.innerWidth, window.innerHeight); layout(); }
+
+function draw() {
+  if (PHONE_MODE && inPreview) return;
+  const dt = Math.min(0.05, deltaTime / 1000);
+  background(14, 13, 18);
+  if (NET === 'guest') followHost();
+  else { step(applyCursors(), dt); broadcast(); }
+  drawBall();
+  drawCursors();
+  updateWho();
+}
+</script>
+
+</body></html>
